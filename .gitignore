@@ -1,0 +1,43 @@
+# --- Secrets (most important) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+kalshi_private_key*
+
+# --- Data (too big for git, and some has license limits) ---
+data/
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.csv.gz
+*.json.gz
+
+# --- Trained models and outputs ---
+models/*.pkl
+models/*.joblib
+models/*.txt
+outputs/
+logs/
+*.log
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Editors and OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db   
