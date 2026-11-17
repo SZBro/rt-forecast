@@ -58,6 +58,10 @@ Keep it simple: no Docker, Kubernetes, Airflow or Postgres.
 ## Working conventions
 
 - Every change goes through a pull request reviewed by the other teammate. Reference issues with `Closes #N`.
+- **Log every change in `LOG.md`**, newest first, in the same commit as the change: what, why, files, and where (branch, task #, who). Format is at the top of `LOG.md`.
+  - Claude does this **automatically, without being asked**, for every change it makes to the repo (code, docs, config, dependencies). Update the log before committing, so the entry lands in the same commit.
+  - After updating the log, **tell the user in chat**: one line saying `LOG.md` was updated, then a short bullet list of the important items logged (main features, decisions, new commands or dependencies). Skip minor details.
+  - Several small changes for the same task can share one entry; edit that entry instead of adding near-duplicates.
 - Run `ruff` and `pytest` before opening a PR. Add tests for the updater, splits, and order/safety logic.
 - Be polite to external sites: descriptive User-Agent, delays between requests, retries with backoff. Check Rotten Tomatoes' terms and robots.txt before scraping.
 
