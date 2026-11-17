@@ -14,14 +14,14 @@ Kalshi lists markets on a film's Rotten Tomatoes score, settled the Monday after
 1. Predicts a film's score **before reviews exist**, from data about the film and the people who made it.
 2. **Updates that prediction live** as critic reviews come in.
 3. Labels new reviews Fresh or Rotten **before Rotten Tomatoes counts them**.
-4. Compares the predicted odds to Kalshi's prices and **paper trades** when the gap is large enough.
+4. Compares the predicted odds to Kalshi's prices and **records simulated trades** when the gap is large enough. No real orders are ever placed.
 
 The main goal is to show, with honest backtests, whether the model's probabilities beat the market's own odds.
 
 ## How it works
 
 ```
-Data sources ──► Collectors + database ──► Models ──► Edge vs. Kalshi price ──► Paper trader
+Data sources ──► Collectors + database ──► Models ──► Edge vs. Kalshi price ──► Simulated trader
 (Kalshi, Wikidata,  (timestamped snapshots)  (prior,                              Backtest + dashboard
  reviews, RSS)                                classifier,
                                               live updater)
@@ -33,7 +33,7 @@ Data sources ──► Collectors + database ──► Models ──► Edge vs.
 | **Review classifier** | Labels new reviews Fresh or Rotten. Baseline: TF-IDF + logistic regression. Main model: fine-tuned DistilBERT. An LLM is used as a benchmark. |
 | **Live updater** | Beta-Binomial update of the prior with the reviews so far, plus Monte Carlo simulation of the remaining reviews. Outputs P(score above X) for each Kalshi threshold. |
 | **Calibration** | Isotonic regression so a predicted 70% happens about 70% of the time. |
-| **Edge + paper trader** | Compares calibrated odds to the order book after fees, sizes with fractional Kelly, and logs simulated trades at real prices. |
+| **Edge + simulated trader** | Compares calibrated odds to the order book after fees, sizes with fractional Kelly, and logs simulated trades at real prices (buy at the ask, sell at the bid, never more than the order book showed). Nothing is sent to Kalshi. |
 
 ## Design rules
 
@@ -42,7 +42,7 @@ Data sources ──► Collectors + database ──► Models ──► Edge vs.
 - **Raw first:** every fetched response is saved before parsing, so data can be re-processed without fetching again.
 - **Log everything:** every prediction is stored with its model version, time, probability and market price.
 - **Frozen models live:** retraining happens offline; the live system loads a fixed model version.
-- **Paper trading by default:** real orders are off unless explicitly enabled, with hard dollar caps.
+- **Simulation only:** Kalshi is used as a read-only price source through its public market-data API. No account, no API keys, no real orders.
 
 ## Data sources
 
@@ -91,9 +91,9 @@ Code lives in `src/rt_forecast/` (`collectors`, `db`, `features`, `models`); tes
 |---|---|---|
 | 1 | Nov 16 to Nov 22 | Live collector running; Kalshi history; start review scraping |
 | 2 | Nov 23 to Nov 29 | **Go/no-go:** rebuild settlement scores and check them against Kalshi results; title matching; baselines |
-| 3 | Nov 30 to Dec 6 | Live updater + backtest; live paper trading on the Nov 30 markets |
+| 3 | Nov 30 to Dec 6 | Live updater + backtest; live simulated trading on the Nov 30 markets |
 | 4 | Dec 7 to Dec 13 | Review classifier; LightGBM prior; calibration |
-| 5 | Dec 14 to Dec 17 | Paper trader with fees; dashboard; final evaluation and presentation |
+| 5 | Dec 14 to Dec 17 | Simulated trader with fees; dashboard; final evaluation and presentation |
 
 ## Team
 
@@ -104,4 +104,4 @@ Code lives in `src/rt_forecast/` (`collectors`, `db`, `features`, `models`); tes
 
 ## Disclaimer
 
-This is a student project for learning. It is not affiliated with or endorsed by Rotten Tomatoes or Kalshi, and nothing here is financial advice. Trading is simulated by default.
+This is a student project for learning. It is not affiliated with or endorsed by Rotten Tomatoes or Kalshi, and nothing here is financial advice. All trading is simulated; the project never places orders or holds an account with Kalshi.

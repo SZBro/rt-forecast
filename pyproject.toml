@@ -10,6 +10,9 @@ dependencies = [
     "python-dotenv>=1.2.4",
 ]
 
+[project.scripts]
+rt-init-db = "rt_forecast.db.db:main"
+
 # Makes `src/rt_forecast` an installable package, so `import rt_forecast`
 # works from scripts, tests and the server without path hacks.
 [build-system]
