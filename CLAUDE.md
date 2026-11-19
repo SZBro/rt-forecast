@@ -6,26 +6,29 @@ Context for Claude Code in this repo. Read this before making changes.
 
 A 5-week class "Moonshot" project (Nov 16 to Dec 17, 2026) by Skyler and Chris.
 
-We predict a film's final Rotten Tomatoes Tomatometer score and compare our odds to Kalshi prediction-market prices (series `KXRT`). Kalshi settles each market on the score the **Monday after wide release at 10:00 AM ET**. The goal is to show, with honest backtests, whether our probabilities beat the market's own odds, then paper trade live.
+We predict a film's final Rotten Tomatoes Tomatometer score and compare our odds to Kalshi prediction-market prices (series `KXRT`). Kalshi settles each market on the score the **Monday after wide release at 10:00 AM ET**. The goal is to show, with honest backtests, whether our probabilities beat the market's own odds, then run a simulated trader on live prices.
+
+**Kalshi is a read-only data source.** Kalshi is not available in our state, so we never open an account, place orders, or use API keys. "Trades" are simulated rows in our own database, priced from public Kalshi market data.
 
 **Status:** planning is done (design doc in a shared Google Doc: Overview, Technical, Tech Stack, Week 1 tabs). Code is just starting.
 
 ## Architecture
 
 ```
-Data sources → Collectors + database → Models → Edge vs. Kalshi price → Paper trader / Backtest + dashboard
+Data sources → Collectors + database → Models → Edge vs. Kalshi price → Simulated trader / Backtest + dashboard
 ```
 
 | Component | Approach |
 |---|---|
-| Kalshi data | Public market-data API: markets, candlesticks, order books. Settled markets older than the cutoff come from the `/historical/` endpoints. |
+| Kalshi data | Public market-data API, read-only, no account or keys: markets, candlesticks, order books. Settled markets older than the cutoff come from the `/historical/` endpoints. |
 | Film metadata | Wikidata (SPARQL, CC0). Not TMDB: its free license forbids commercial use. |
 | Reviews | Kaggle Rotten Tomatoes dataset (to about 2020), scraped Rotten Tomatoes pages (2021 to 2026), critic outlet RSS feeds. |
 | Prior model | LightGBM. Predicts p (chance a review is Fresh) and N (review count at settlement), plus confidence. Baselines first: director average, genre average. |
 | Review classifier | Our own: TF-IDF + logistic regression baseline, then fine-tuned DistilBERT. An LLM is only a benchmark/fallback (no paid API by default). |
 | Live updater | Beta-Binomial: prior as pseudo-reviews + reviews so far, Monte Carlo over remaining reviews, drift correction for early reviews. Outputs P(score > X) for every Kalshi threshold. |
 | Calibration | Isotonic regression fit on dev predictions only. |
-| Decision | Edge = calibrated P minus ask price after fees. Trade only above a safety margin; size with 1/4 Kelly inside hard dollar caps. |
+| Decision | Edge = calibrated P minus ask price after fees. Simulate a trade only above a safety margin; size with 1/4 Kelly inside hard caps on a simulated bankroll. |
+| Simulated trader | Records would-be trades in our database: buy at the ask, sell at the bid, charge Kalshi's fee formula, never fill more than the order book showed. Nothing is sent to Kalshi. |
 
 ## Rules (do not break these)
 
@@ -35,7 +38,7 @@ Data sources → Collectors + database → Models → Edge vs. Kalshi price → 
 4. **Splits are by film and by time.** Never random. Train < dev < test by settlement date; the test set is touched once at the end. All scripts import splits from one module.
 5. **Log every prediction** with model version, `as_of`, probability and market price.
 6. **Live uses frozen model versions.** Retraining is offline.
-7. **Paper trading by default.** Real orders require `LIVE_TRADING=true`, per-trade and total caps, a stale-data check, and no duplicate orders after a restart.
+7. **Simulation only, never real orders.** No Kalshi account, no order endpoints, no trading keys, no `LIVE_TRADING` switch. The simulated trader still uses per-trade and total caps, a stale-data check, and no duplicate trades after a restart, so its results are realistic.
 8. **Secrets never get committed.** Keys live in `.env`; only `.env.example` is in git. Data files and the database are not committed.
 9. **All timestamps in UTC**, stored as ISO text. Convert only for display.
 
@@ -43,12 +46,12 @@ Data sources → Collectors + database → Models → Edge vs. Kalshi price → 
 
 - Reference: `films`, `people`, `film_people` (role: director / writer / cast), `markets` (one row per Kalshi threshold contract).
 - Time series: `price_snapshots`, `reviews` (with `published_date`, `first_seen_at`, `rt_counted_at`), `rt_snapshots`, `classifications`.
-- Outputs: `predictions`, `trades` (mode: paper / real), `raw_fetches`.
+- Outputs: `predictions`, `trades` (simulated only), `raw_fetches`.
 - TV markets are out of scope for v1.
 
 ## Tech stack
 
-Python 3.11+, uv (or venv), SQLite, pandas, numpy, scipy, scikit-learn, lightgbm, shap, transformers (Colab GPU for fine-tuning), httpx, selectolax/BeautifulSoup, feedparser, cryptography (Kalshi request signing), pytest, ruff, Streamlit + plotly. Scheduling with cron or APScheduler; a small Linux server with systemd for the live collector.
+Python 3.11+, uv (or venv), SQLite, pandas, numpy, scipy, scikit-learn, lightgbm, shap, transformers (Colab GPU for fine-tuning), httpx, selectolax/BeautifulSoup, feedparser, pytest, ruff, Streamlit + plotly. Scheduling with cron or APScheduler; a small Linux server with systemd for the live collector.
 
 Keep it simple: no Docker, Kubernetes, Airflow or Postgres.
 
