@@ -133,6 +133,12 @@ CREATE INDEX IF NOT EXISTS idx_markets_film
 -- ts = when the price was true (for candlesticks: the end of the candle).
 -- The UNIQUE key makes backfills safe to re-run and doubles as the
 -- (ticker, ts) index.
+--
+-- Live rows take bid/ask and their sizes from the order book (depth at the
+-- best price: how many contracts a simulated trade could fill). Candlesticks
+-- have no book, so their sizes are NULL. Depth can't be backfilled later; the
+-- full book (every level) stays in the raw file behind raw_fetch_id.
+-- Kalshi allows fractional contracts, so sizes and volume are REAL.
 CREATE TABLE IF NOT EXISTS price_snapshots (
     id            INTEGER PRIMARY KEY,
     ticker        TEXT NOT NULL REFERENCES markets (ticker),
@@ -140,9 +146,11 @@ CREATE TABLE IF NOT EXISTS price_snapshots (
                   CHECK (ts GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z'),
     yes_bid       REAL CHECK (yes_bid BETWEEN 0 AND 1),
     yes_ask       REAL CHECK (yes_ask BETWEEN 0 AND 1),
+    yes_bid_size  REAL CHECK (yes_bid_size >= 0),   -- contracts resting at yes_bid
+    yes_ask_size  REAL CHECK (yes_ask_size >= 0),   -- contracts resting at yes_ask
     last_price    REAL CHECK (last_price BETWEEN 0 AND 1),
-    volume        INTEGER,
-    open_interest INTEGER,
+    volume        REAL,
+    open_interest REAL,
     source        TEXT NOT NULL CHECK (source IN ('live', 'candlestick', 'historical')),
     raw_fetch_id  INTEGER REFERENCES raw_fetches (id),
     UNIQUE (ticker, ts, source)
