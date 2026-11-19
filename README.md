@@ -2,7 +2,7 @@
 
 Predicting final Rotten Tomatoes Tomatometer scores and comparing them to Kalshi prediction-market prices.
 
-> **Status:** Planning. Design docs are written; code is not built yet.
+> **Status:** Week 1. Repo set up; data collectors in progress.
 > This is a 5-week class "Moonshot" project (Nov 16 to Dec 17, 2026) by a two-person team.
 
 ---
@@ -64,13 +64,26 @@ See the project's design doc for the full table of tools by task.
 
 ## Getting started
 
-> Setup steps will be filled in as code is added.
+You need Git, Python 3.11+ and [uv](https://docs.astral.sh/uv/) (`pip install uv` works).
 
 ```bash
-git clone https://github.com/<owner>/tomato-oracle.git
-cd tomato-oracle
-cp .env.example .env   # then fill in your own values
+git clone https://github.com/SZBro/rt-forecast.git
+cd rt-forecast
+uv sync                 # creates .venv and installs the exact versions in uv.lock
+cp .env.example .env    # then fill in your own values (never commit .env)
 ```
+
+Check that everything works:
+
+```bash
+uv run pytest           # tests
+uv run ruff check .     # lint
+uv run ruff format .    # auto-format
+```
+
+Adding a package: `uv add <name>` (or `uv add --dev <name>` for dev tools), then commit both `pyproject.toml` and `uv.lock`. After pulling someone else's changes, run `uv sync` again.
+
+Code lives in `src/rt_forecast/` (`collectors`, `db`, `features`, `models`); tests in `tests/`. Data is written to `data/` (not committed).
 
 ## Roadmap
 
@@ -86,8 +99,8 @@ cp .env.example .env   # then fill in your own values
 
 | Name | Focus |
 |---|---|
-| TBD | TBD |
-| TBD | TBD |
+| Skyler | Infra and Kalshi data: repo, database, Kalshi client, live collector, server |
+| Chris | Review data: Kaggle import, Rotten Tomatoes scraper, live RT snapshots, Wikidata |
 
 ## Disclaimer
 
