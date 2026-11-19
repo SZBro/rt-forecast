@@ -16,14 +16,30 @@ from datetime import UTC, datetime
 from importlib import resources
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 # STRICT tables need SQLite 3.37+. Python ships its own SQLite on Windows,
 # but on Linux it uses the system one, which can be older (e.g. Debian 11).
 MIN_SQLITE_VERSION = (3, 37, 0)
 
 
+def load_settings() -> None:
+    """Read .env into the environment. Commands call this first.
+
+    Variables already set in the shell win over .env (override=False), so a
+    one-off `RT_DB_PATH=... uv run ...` still works.
+    """
+    load_dotenv(override=False)
+
+
 def default_db_path() -> Path:
     """Database path from $RT_DB_PATH, else data/rt.db."""
     return Path(os.environ.get("RT_DB_PATH", "data/rt.db"))
+
+
+def default_raw_dir() -> Path:
+    """Folder for gzipped raw responses, from $RT_RAW_DIR, else data/raw."""
+    return Path(os.environ.get("RT_RAW_DIR", "data/raw"))
 
 
 def to_utc_iso(dt: datetime) -> str:
@@ -69,6 +85,7 @@ def init_db(db_path: str | Path | None = None) -> Path:
 
 
 def main() -> None:
+    load_settings()
     parser = argparse.ArgumentParser(description="Create an empty rt-forecast database.")
     parser.add_argument(
         "--path", type=Path, help="database file (default: $RT_DB_PATH or data/rt.db)"
