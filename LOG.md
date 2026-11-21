@@ -15,6 +15,12 @@ Entry format:
 
 ---
 
+## 2026-11-20: Kaggle Rotten Tomatoes import (task #7)
+- **What:** Added `rt-import-kaggle` to download-site-independent CSV import plumbing, gzip and record both Kaggle CSVs in `raw_fetches`, map movie and review fields into `films`, `film_genres`, and `reviews`, normalize dates and Fresh/Rotten labels, and preserve duplicate Kaggle review keys with a row-number disambiguator. Recorded the Kaggle license as **CC0: Public Domain**.
+- **Why:** Historical labeled reviews are needed for baselines and backtests. The importer is rerunnable, source-tagged, and keeps raw gzipped copies under ignored `data/`.
+- **Files:** `src/rt_forecast/collectors/kaggle.py`, `tests/test_kaggle.py`, `pyproject.toml`, `README.md`, `LOG.md`.
+- **Where:** `data/kaggle-import` (task #7). By: Claude.
+
 ## 2026-11-17: Live collector v1 (task #5)
 - **What:** `rt-collect-once` snapshots every open KXRT market: best bid/ask **and the contracts resting at each** (from the order book), plus last price, volume and open interest, into `price_snapshots`. Each response is recorded in `raw_fetches` and linked from its snapshot. `rt-collect-loop --interval N` (default 15) repeats a pass at wall-clock-aligned ticks until stopped. `rt-collect-gaps` finds missing snapshot intervals per ticker and prints them merged into outages (`--per-ticker` for the full list); exits 1 if any. Proven with a real 70-min run at a 5-min interval on 2026-11-17: 145 markets, ~30 s per pass, 0 errors; the gap check caught both the deliberate 20-min kill (4 passes missed) and an unplanned 11-min pause (laptop lid closed mid-pass; the pass resumed and finished cleanly). Schema: `price_snapshots` gains `yes_bid_size`/`yes_ask_size`; `volume`/`open_interest` are now REAL (Kalshi sends fractional contracts). New `RT_RAW_DIR` setting; commands now read `.env` (nothing did before).
 - **Why:** Order-book depth can't be backfilled, so it has to be collected live before the Nov 30 films' embargoes lift. `ts` is the order-book fetch time (no look-ahead). Reruns are safe through `ON CONFLICT DO NOTHING` on (ticker, ts, source), which, unlike `INSERT OR IGNORE`, doesn't hide CHECK failures. A failing market is logged and skipped, and a pass stops after 5 failures in a row (Kalshi down). A plain loop instead of APScheduler: no extra dependency for a 20-line job. On the server (#6), a systemd timer running `rt-collect-once` is the simpler, crash-isolated option.

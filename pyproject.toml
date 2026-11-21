@@ -16,6 +16,7 @@ rt-kalshi-markets = "rt_forecast.collectors.kalshi:main"
 rt-collect-once = "rt_forecast.collectors.kalshi_live:main_once"
 rt-collect-loop = "rt_forecast.collectors.kalshi_live:main_loop"
 rt-collect-gaps = "rt_forecast.collectors.gaps:main"
+rt-import-kaggle = "rt_forecast.collectors.kaggle:main"
 
 # Makes `src/rt_forecast` an installable package, so `import rt_forecast`
 # works from scripts, tests and the server without path hacks.

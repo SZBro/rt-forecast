@@ -50,7 +50,7 @@ Data sources ──► Collectors + database ──► Models ──► Edge vs.
 |---|---|
 | Kalshi API (public market data) | Markets, thresholds, settlement times, price history, order books |
 | Wikidata (SPARQL, CC0) | Film metadata and links between people and films |
-| Kaggle Rotten Tomatoes dataset | Historical critic reviews with labels (up to about 2020) |
+| Kaggle Rotten Tomatoes dataset | Historical critic reviews with labels (up to about 2020). Dataset: [`stefanoleone992/rotten-tomatoes-movies-and-critic-reviews-dataset`](https://www.kaggle.com/datasets/stefanoleone992/rotten-tomatoes-movies-and-critic-reviews-dataset). License shown by Kaggle: **CC0: Public Domain**. |
 | Rotten Tomatoes pages | Recent reviews and live scores |
 | Critic outlet RSS feeds | Full review text, often before Rotten Tomatoes adds it |
 
