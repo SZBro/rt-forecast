@@ -1,0 +1,6 @@
+// rt-forecast: reboot for kernel/security updates at 11:00 UTC (3 AM Pacific)
+// Install: /etc/apt/apt.conf.d/52rt-forecast-autoreboot
+// Named 52- so it is read after Ubuntu's 50unattended-upgrades (later apt files win).
+// Requires Linode's Shutdown Watchdog (Lassie) so the server powers back on.
+Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-Time "11:00";

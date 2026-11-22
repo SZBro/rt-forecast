@@ -1,0 +1,22 @@
+# rt-forecast: one collection pass over every open Kalshi KXRT market.
+# Install: /etc/systemd/system/rt-collect.service (started by rt-collect.timer)
+[Unit]
+Description=rt-forecast: snapshot Kalshi KXRT markets once
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=rt
+Group=rt
+WorkingDirectory=/opt/rt-forecast
+ExecStart=/opt/rt-forecast/.venv/bin/rt-collect-once
+# A normal pass takes ~30 s; kill a stuck one so the next tick can run.
+TimeoutStartSec=10min
+
+# Sandboxing: the collector can only write to its data folder.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/rt-forecast

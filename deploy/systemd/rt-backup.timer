@@ -1,0 +1,13 @@
+# rt-forecast: run rt-backup.service daily at 10:40 UTC (2:40 AM Pacific),
+# before the 11:00 UTC update reboot.
+# Install: /etc/systemd/system/rt-backup.timer, then:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now rt-backup.timer
+[Unit]
+Description=rt-forecast: nightly backup
+
+[Timer]
+OnCalendar=*-*-* 10:40:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target
