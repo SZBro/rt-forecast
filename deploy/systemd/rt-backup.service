@@ -1,0 +1,17 @@
+# rt-forecast: nightly backup of rt.db and raw responses.
+# Install: /etc/systemd/system/rt-backup.service (started by rt-backup.timer)
+[Unit]
+Description=rt-forecast: back up rt.db and raw responses
+
+[Service]
+Type=oneshot
+# As rt, not root, so SQLite's side files (-wal, -shm) stay owned by rt.
+User=rt
+Group=rt
+ExecStart=/usr/local/bin/rt-backup
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/rt-forecast /var/backups/rt-forecast
