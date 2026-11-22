@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# rt-q: run a saved query (sql/queries/<name>.sql) against the live database, read-only.
+# Install: /usr/local/bin/rt-q
+# Usage:   rt-q                 list the queries
+#          rt-q passes          snapshots per 15-minute pass
+#          rt-q films           films with markets
+#          rt-q film DUNE       one film's latest prices
+#          rt-q market KXRT-DUNE-80
+set -euo pipefail
+
+QUERIES=${RT_QUERIES:-/opt/rt-forecast/sql/queries}
+DB=${RT_DB:-/var/lib/rt-forecast/rt.db}
+
+name=${1:-}
+if [ -z "$name" ] || [ ! -f "$QUERIES/$name.sql" ]; then
+    echo "usage: rt-q <query> [arg]"
+    echo "queries:"
+    for f in "$QUERIES"/*.sql; do
+        printf '  %-8s %s\n' "$(basename "$f" .sql)" "$(head -1 "$f" | sed 's/^-- *//')"
+    done
+    exit 1
+fi
+
+# The argument goes into the SQL as a quoted value, so allow only ticker characters.
+arg=${2:-}
+if [[ -n "$arg" && ! "$arg" =~ ^[A-Za-z0-9.-]+$ ]]; then
+    echo "rt-q: bad argument '$arg' (letters, digits, '.' and '-' only)" >&2
+    exit 1
+fi
+arg=${arg^^}                                     # tickers are upper case
+if [[ "$name" == film && -n "$arg" && "$arg" != KXRT-* ]]; then
+    arg="KXRT-$arg"                              # 'rt-q film dune' works too
+fi
+
+cmd=(sqlite3 -readonly -box -header -cmd ".parameter set :arg '$arg'" "$DB")
+# The data folder belongs to rt; open it as rt so SQLite's side files stay rt's.
+if [ "$(id -un)" != rt ]; then
+    cmd=(sudo -u rt "${cmd[@]}")
+fi
+"${cmd[@]}" < "$QUERIES/$name.sql"
