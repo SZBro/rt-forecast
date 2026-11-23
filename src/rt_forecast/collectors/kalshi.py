@@ -88,6 +88,7 @@ class Market:
     settles_at: str | None  # when the score is read (Monday 10:00 AM ET)
     settled_at: str | None  # when Kalshi actually settled it; None until then
     result: str | None  # 'yes' / 'no' once settled
+    settlement_value: float | None  # the Tomatometer Kalshi settled on; None if unparseable
     yes_bid: float | None  # dollars per contract, 0-1
     yes_ask: float | None
     last_price: float | None
@@ -103,7 +104,7 @@ class Candle:
     end_at: str  # end of the period, UTC
     yes_bid: float | None
     yes_ask: float | None
-    price: float | None  # last trade; None if nothing traded in the period
+    price: float | None  # last trade as of end_at (may be from an earlier period)
     volume: float | None
     open_interest: float | None
 
@@ -161,6 +162,19 @@ def _ts(value: str | None) -> str | None:
     return to_utc_iso(datetime.fromisoformat(value))
 
 
+def parse_settlement_value(value: str | None) -> float | None:
+    """Kalshi's expiration_value ('95', '33%') -> 95.0. Anything else -> None.
+
+    It is free text: one film (KXRT-SCR) has 'Above 32', which is not a score.
+    Better no value than a wrong one; the raw text stays in the raw files.
+    """
+    match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*%?\s*", value or "")
+    if not match:
+        return None
+    score = float(match.group(1))
+    return score if 0 <= score <= 100 else None
+
+
 def parse_market(m: dict[str, Any]) -> Market:
     return Market(
         ticker=m["ticker"],
@@ -175,6 +189,7 @@ def parse_market(m: dict[str, Any]) -> Market:
         settles_at=_ts(m.get("expected_expiration_time") or m.get("close_time")),
         settled_at=_ts(m.get("settlement_ts")),
         result=m.get("result") or None,
+        settlement_value=parse_settlement_value(m.get("expiration_value")),
         yes_bid=_num(m, "yes_bid"),
         yes_ask=_num(m, "yes_ask"),
         last_price=_num(m, "last_price"),
@@ -185,11 +200,22 @@ def parse_market(m: dict[str, Any]) -> Market:
 
 
 def parse_candle(c: dict[str, Any]) -> Candle:
+    """Closing values of one period, stamped with the period's END.
+
+    The close is the state at the end of the period, so that is the earliest
+    moment it was knowable. Stamping it with the start would leak up to one
+    period of the future into a backtest (rule 1).
+    """
+    price = _num(c.get("price"), "close")
+    if price is None:
+        # No trade this period: 'previous' is the last trade before it, which
+        # matches what a live snapshot's last_price means.
+        price = _num(c.get("price"), "previous")
     return Candle(
         end_at=to_utc_iso(datetime.fromtimestamp(c["end_period_ts"], UTC)),
         yes_bid=_num(c.get("yes_bid"), "close"),
         yes_ask=_num(c.get("yes_ask"), "close"),
-        price=_num(c.get("price"), "close"),
+        price=price,
         volume=_num(c, "volume"),
         open_interest=_num(c, "open_interest"),
     )

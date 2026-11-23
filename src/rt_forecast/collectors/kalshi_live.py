@@ -108,9 +108,9 @@ class Collector:
         self.conn.executemany(
             """INSERT INTO markets
                    (ticker, event_ticker, series_ticker, kalshi_title, threshold, strike_type,
-                    open_at, close_at, settles_at, status, result, settled_at,
+                    open_at, close_at, settles_at, status, result, settlement_value, settled_at,
                     first_seen_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT (ticker) DO UPDATE SET
                    kalshi_title = excluded.kalshi_title,
                    threshold    = excluded.threshold,
@@ -120,6 +120,7 @@ class Collector:
                    settles_at   = excluded.settles_at,
                    status       = excluded.status,
                    result       = excluded.result,
+                   settlement_value = excluded.settlement_value,
                    settled_at   = excluded.settled_at,
                    updated_at   = excluded.updated_at""",
             [
@@ -135,6 +136,7 @@ class Collector:
                     m.settles_at,
                     m.status,
                     m.result,
+                    m.settlement_value,
                     m.settled_at,
                     now,
                     now,

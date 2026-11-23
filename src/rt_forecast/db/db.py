@@ -74,13 +74,33 @@ def get_connection(db_path: str | Path | None = None) -> sqlite3.Connection:
     return conn
 
 
+# Columns added to schema.sql after a database may already exist. CREATE TABLE
+# IF NOT EXISTS never changes an existing table, so init_db() adds these when
+# missing. Only ever append; each must match its definition in schema.sql.
+MIGRATIONS: list[tuple[str, str, str]] = [
+    ("markets", "settlement_value", "REAL CHECK (settlement_value BETWEEN 0 AND 100)"),
+]
+
+
+def _add_missing_columns(conn: sqlite3.Connection) -> None:
+    for table, column, definition in MIGRATIONS:
+        existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+        if column not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+    conn.commit()
+
+
 def init_db(db_path: str | Path | None = None) -> Path:
-    """Create the database file and every table. Safe to run more than once."""
+    """Create the database file and every table. Safe to run more than once.
+
+    Also adds columns that newer code expects to an older database (MIGRATIONS).
+    """
     path = Path(db_path or default_db_path())
     path.parent.mkdir(parents=True, exist_ok=True)
     schema = resources.files("rt_forecast.db").joinpath("schema.sql").read_text("utf-8")
     with closing(get_connection(path)) as conn:
         conn.executescript(schema)
+        _add_missing_columns(conn)
     return path
 
 

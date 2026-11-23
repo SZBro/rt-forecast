@@ -97,7 +97,10 @@ CREATE INDEX IF NOT EXISTS idx_film_people_person
 -- One row per Kalshi contract (one threshold of one film's event).
 -- status/result/settled_at are updated in place as the market moves through
 -- open -> closed -> settled; the full API responses stay in raw_fetches.
--- Only evaluation code may read result (it is the answer).
+-- Only evaluation code may read result and settlement_value (they are the answer).
+-- settlement_value is the Tomatometer Kalshi settled on (its expiration_value),
+-- NULL until settled or when Kalshi's text isn't a plain number.
+-- (Added after v1: db.py's MIGRATIONS adds it to databases created before.)
 CREATE TABLE IF NOT EXISTS markets (
     ticker        TEXT PRIMARY KEY,
     event_ticker  TEXT NOT NULL,
@@ -114,6 +117,7 @@ CREATE TABLE IF NOT EXISTS markets (
                   CHECK (settles_at GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z'),
     status        TEXT,
     result        TEXT CHECK (result IN ('yes', 'no')),
+    settlement_value REAL CHECK (settlement_value BETWEEN 0 AND 100),
     settled_at    TEXT
                   CHECK (settled_at GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z'),
     first_seen_at TEXT NOT NULL
